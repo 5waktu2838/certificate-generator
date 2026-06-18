@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Roblox Certificate Generator - Multi Template</title>
+    <title>Roblox Certificate Generator Pro - Multi & Drag</title>
     <style>
         :root {
             --primary: #1E3A8A;
@@ -34,7 +34,7 @@
             max-width: 500px;
             min-height: 100vh;
             background-color: var(--bg-card);
-            padding: 24px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
@@ -46,23 +46,23 @@
         }
 
         header h1 { 
-            font-size: 22px; 
+            font-size: 20px; 
             font-weight: 800;
-            margin: 0 0 6px 0;
+            margin: 0 0 4px 0;
             color: var(--primary);
         }
 
         header p { 
             color: #64748B; 
             margin: 0; 
-            font-size: 13px; 
+            font-size: 12px; 
         }
         
         .canvas-wrapper {
             position: relative;
             width: 100%;
-            margin-bottom: 20px;
-            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border);
@@ -79,36 +79,64 @@
         .control-panel { 
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
+            background: #F8FAFC;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
         }
 
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
         }
 
         .input-group label {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             color: var(--primary);
         }
 
-        /* Styling baru untuk Dropdown Pilihan */
         select, input[type="text"] {
             width: 100%;
-            padding: 14px;
-            font-size: 15px;
+            padding: 12px;
+            font-size: 14px;
             border: 1px solid var(--border);
-            border-radius: 10px;
+            border-radius: 8px;
             outline: none;
             transition: all 0.2s;
-            background-color: #F8FAFC;
+            background-color: #FFF;
             font-family: inherit;
         }
         select:focus, input[type="text"]:focus {
             border-color: var(--accent);
-            background-color: #FFF;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Styling FITUR BARU: Slider Ukuran */
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 0;
+        }
+
+        .slider-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary);
+            min-width: 90px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #E2E8F0;
+            border-radius: 5px;
+            accent-color: var(--accent);
+            cursor: pointer;
         }
 
         button {
@@ -125,6 +153,7 @@
             justify-content: center;
             gap: 8px;
         }
+        button:active { transform: scale(0.98); }
 
         .btn-download {
             background-color: var(--accent);
@@ -141,7 +170,7 @@
     <div class="mobile-container">
         <header>
             <h1>Oink Cert Maker Pro 🎓</h1>
-            <p>Pilih tipe sertifikat, ketik nama, lalu geser posisinya jika perlu</p>
+            <p>Pilih tipe, ketik nama, <b>atur ukuran</b>, lalu geser posisinya</p>
         </header>
         
         <div class="canvas-wrapper" id="canvas-holder">
@@ -150,7 +179,7 @@
 
         <div class="control-panel">
             <div class="input-group">
-                <label for="template-select">Pilih Tipe Sertifikat</label>
+                <label for="template-select">Tipe Sertifikat</label>
                 <select id="template-select">
                     <option value="sertifikat1.png">Sertifikat Komentar Pertama 💬</option>
                     <option value="sertifikat2.png">Sertifikat Reply Pertama 🔁</option>
@@ -159,10 +188,15 @@
 
             <div class="input-group">
                 <label for="name-input">Nama Pemenang</label>
-                <input type="text" id="name-input" placeholder="Masukkan nama di sini..." autocomplete="off" disabled>
+                <input type="text" id="name-input" placeholder="Masukkan nama..." autocomplete="off" disabled>
             </div>
             
-            <button id="download-btn" class="btn-download" disabled>📥 Download Sertifikat (PNG)</button>
+            <div class="slider-group input-group">
+                <label for="size-slider">Ukuran Tulisan</label>
+                <input type="range" id="size-slider" min="20" max="150" value="80" disabled>
+            </div>
+            
+            <button id="download-btn" class="btn-download" disabled>📥 Download (PNG)</button>
         </div>
     </div>
 
@@ -172,20 +206,24 @@
         const nameInput = document.getElementById('name-input');
         const downloadBtn = document.getElementById('download-btn');
         const templateSelect = document.getElementById('template-select');
+        const sizeSlider = document.getElementById('size-slider');
         const canvasHolder = document.getElementById('canvas-holder');
 
-        // Menyimpan objek Image yang sedang aktif
         let certActiveImg = new Image();
         
         let textX = 0;
         let textY = 0;
         let namaTeks = "";
-        let fontSize = 0;
+        
+        // State baru untuk ukuran font
+        let baseFontSize = 0; // Ukuran font default berdasarkan resolusi gambar
+        let userSizeFactor = 100; // Persentase ukuran dari slider (20% - 150%)
         let isDragging = false;
 
-        // Fungsi untuk memuat gambar sertifikat berdasarkan pilihan dropdown
+        // Fungsi memuat template sertifikat
         function muatTemplate(namaFile) {
-            nameInput.disabled = true; // Kunci input sebentar saat loading gambar
+            nameInput.disabled = true;
+            sizeSlider.disabled = true; // Kunci slider saat loading
             certActiveImg = new Image();
             certActiveImg.src = namaFile;
 
@@ -193,20 +231,27 @@
                 canvas.width = certActiveImg.width;
                 canvas.height = certActiveImg.height;
                 
-                // Atur ulang posisi default teks ke tengah garis (39.5% lebar, 52.5% tinggi)
+                // Atur ulang posisi default teks
                 textX = canvas.width * 0.395;
                 textY = canvas.height * 0.525;
-                fontSize = Math.round(canvas.height * 0.045);
+                
+                // Hitung ukuran font dasar berdasarkan resolusi gambar sertifikat
+                baseFontSize = Math.round(canvas.height * 0.045);
+                
+                // Reset slider ukuran ke 100% (default)
+                userSizeFactor = 100;
+                sizeSlider.value = 100;
 
                 nameInput.disabled = false;
+                sizeSlider.disabled = false; // Aktifkan slider
                 renderSertifikat();
             };
         }
 
-        // Jalankan template pertama kali saat web dibuka
+        // Muat template pertama kali
         muatTemplate(templateSelect.value);
 
-        // Event ketika dropdown pilihan sertifikat diubah oleh user
+        // Event ubah template
         templateSelect.addEventListener('change', (e) => {
             muatTemplate(e.target.value);
         });
@@ -218,80 +263,11 @@
 
             if (namaTeks.trim() !== "") {
                 ctx.save();
-                ctx.font = `bold ${fontSize}px Georgia, serif`;
+                
+                // Hitung ukuran font final: baseFontSize dikali persentase user
+                const finalFontSize = Math.round(baseFontSize * (userSizeFactor / 100));
+                
+                ctx.font = `bold ${finalFontSize}px Georgia, serif`;
                 ctx.fillStyle = '#112244';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
-                
-                ctx.fillText(namaTeks, textX, textY);
-                ctx.restore();
-                
-                canvasHolder.style.cursor = 'move';
-                downloadBtn.disabled = false;
-            } else {
-                canvasHolder.style.cursor = 'default';
-                downloadBtn.disabled = true;
-            }
-        }
-
-        nameInput.addEventListener('input', (e) => {
-            namaTeks = e.target.value;
-            renderSertifikat();
-        });
-
-        // --- INTERAKSI GESER TEKS ---
-        function dapatkanKoordinat(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            const x = (clientX - rect.left) * (canvas.width / rect.width);
-            const y = (clientY - rect.top) * (canvas.height / rect.height);
-            return { x, y };
-        }
-
-        function mulaiGeser(e) {
-            if (namaTeks.trim() === "") return;
-            const pos = dapatkanKoordinat(e);
-            
-            const estimasiLebarTeks = ctx.measureText(namaTeks).width || (namaTeks.length * fontSize * 0.5);
-            const batasKiri = textX - (estimasiLebarTeks / 2) - 40;
-            const batasKanan = textX + (estimasiLebarTeks / 2) + 40;
-            const batasAtas = textY - fontSize - 20;
-            const batasBawah = textY + 20;
-
-            if (pos.x >= batasKiri && pos.x <= batasKanan && pos.y >= batasAtas && pos.y <= batasBawah) {
-                isDragging = true;
-                e.preventDefault();
-            }
-        }
-
-        function prosesGeser(e) {
-            if (!isDragging) return;
-            e.preventDefault();
-            const pos = dapatkanKoordinat(e);
-            textX = pos.x;
-            textY = pos.y;
-            renderSertifikat();
-        }
-
-        function selesaiGeser() { isDragging = false; }
-
-        canvasHolder.addEventListener('mousedown', mulaiGeser);
-        window.addEventListener('mousemove', prosesGeser);
-        window.addEventListener('mouseup', selesaiGeser);
-        canvasHolder.addEventListener('touchstart', mulaiGeser);
-        window.addEventListener('touchmove', prosesGeser);
-        window.addEventListener('touchend', selesaiGeser);
-
-        // Download Final Gambar (.png)
-        downloadBtn.addEventListener('click', () => {
-            const namaFile = namaTeks.toLowerCase().replace(/[^a-z0-9]/g, '-');
-            const tipeSertifikat = templateSelect.value.split('.')[0]; // mengambil nama 'sertifikat1' atau 'sertifikat2'
-            const link = document.createElement('a');
-            link.download = `${tipeSertifikat}-${namaFile || 'player'}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        });
-    </script>
-</body>
-</html>
