@@ -271,3 +271,87 @@
                 ctx.fillStyle = '#112244';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
+                
+                ctx.fillText(namaTeks, textX, textY);
+                ctx.restore();
+                
+                canvasHolder.style.cursor = 'move';
+                downloadBtn.disabled = false;
+            } else {
+                canvasHolder.style.cursor = 'default';
+                downloadBtn.disabled = true;
+            }
+        }
+
+        // Sinkronisasi input teks
+        nameInput.addEventListener('input', (e) => {
+            namaTeks = e.target.value;
+            renderSertifikat();
+        });
+
+        // Event Listener untuk FITUR BARU: Slider Ukuran
+        sizeSlider.addEventListener('input', (e) => {
+            userSizeFactor = parseInt(e.target.value);
+            renderSertifikat();
+        });
+
+        // --- INTERAKSI GESER TEKS ---
+        function dapatkanKoordinat(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = (clientX - rect.left) * (canvas.width / rect.width);
+            const y = (clientY - rect.top) * (canvas.height / rect.height);
+            return { x, y };
+        }
+
+        function mulaiGeser(e) {
+            if (namaTeks.trim() === "") return;
+            const pos = dapatkanKoordinat(e);
+            
+            // Hitung ukuran font saat ini untuk batas drag
+            const finalFontSize = Math.round(baseFontSize * (userSizeFactor / 100));
+            const estimasiLebarTeks = ctx.measureText(namaTeks).width || (namaTeks.length * finalFontSize * 0.5);
+            
+            // Kotak batas klik diperbesar agar lebih mudah ditangkap jari
+            const batasKiri = textX - (estimasiLebarTeks / 2) - 30;
+            const batasKanan = textX + (estimasiLebarTeks / 2) + 30;
+            const batasAtas = textY - finalFontSize - 15;
+            const batasBawah = textY + 15;
+
+            if (pos.x >= batasKiri && pos.x <= batasKanan && pos.y >= batasAtas && pos.y <= batasBawah) {
+                isDragging = true;
+                e.preventDefault();
+            }
+        }
+
+        function prosesGeser(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const pos = dapatkanKoordinat(e);
+            textX = pos.x;
+            textY = pos.y;
+            renderSertifikat();
+        }
+
+        function selesaiGeser() { isDragging = false; }
+
+        canvasHolder.addEventListener('mousedown', mulaiGeser);
+        window.addEventListener('mousemove', prosesGeser);
+        window.addEventListener('mouseup', selesaiGeser);
+        canvasHolder.addEventListener('touchstart', mulaiGeser);
+        window.addEventListener('touchmove', prosesGeser);
+        window.addEventListener('touchend', selesaiGeser);
+
+        // Download Final Gambar (.png)
+        downloadBtn.addEventListener('click', () => {
+            const namaFile = namaTeks.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            const tipeSertifikat = templateSelect.value.split('.')[0];
+            const link = document.createElement('a');
+            link.download = `${tipeSertifikat}-${namaFile || 'player'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    </script>
+</body>
+</html>
